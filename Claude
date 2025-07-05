@@ -1,0 +1,616 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Heart, X, DollarSign, Users, TrendingUp, MapPin, MessageCircle, 
+  Star, Clock, FileText, Eye, Settings, Bell, Filter, Search,
+  ChevronRight, Award, Target, BarChart3, Lock, Unlock
+} from 'lucide-react';
+
+const HotMoneyApp = () => {
+  const [currentUser, setCurrentUser] = useState({
+    id: 1,
+    role: 'investor',
+    name: 'Sarah Chen',
+    email: 'sarah@vcpartners.com'
+  });
+  
+  const [view, setView] = useState('discovery'); // 'discovery', 'matches', 'portfolio', 'hot-money', 'profile'
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [votes, setVotes] = useState(new Map());
+  const [matches, setMatches] = useState([]);
+  const [filterOptions, setFilterOptions] = useState({
+    industry: '',
+    stage: '',
+    fundingRange: '',
+    location: ''
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'hot', message: 'EcoTech Solutions just went HOT! 🔥', timestamp: '2 hours ago' },
+    { id: 2, type: 'match', message: 'You have a new match with HealthAI', timestamp: '1 day ago' }
+  ]);
+
+  // Enhanced startup data with voting counts
+  const startups = [
+    {
+      id: 1,
+      name: "EcoTech Solutions",
+      tagline: "Sustainable tech for a greener future",
+      industry: "CleanTech",
+      stage: "Series A",
+      fundingGoal: "$2M",
+      fundingRaised: "$800K",
+      location: "San Francisco, CA",
+      description: "Revolutionary solar panel efficiency technology that increases energy output by 40%",
+      teamSize: 12,
+      revenue: "$500K ARR",
+      yesVotes: 7,
+      totalVotes: 10,
+      isHot: true,
+      hotSince: "2 days ago",
+      image: "bg-gradient-to-br from-green-400 to-blue-500",
+      documentsCount: 8,
+      lastUpdated: "3 hours ago",
+      metrics: {
+        growth: "+45%",
+        customers: "1,200+",
+        runway: "18 months"
+      }
+    },
+    {
+      id: 2,
+      name: "HealthAI",
+      tagline: "AI-powered healthcare diagnostics",
+      industry: "HealthTech",
+      stage: "Seed",
+      fundingGoal: "$1.5M",
+      fundingRaised: "$300K",
+      location: "Boston, MA",
+      description: "Machine learning platform that detects diseases 3x faster than traditional methods",
+      teamSize: 8,
+      revenue: "$200K ARR",
+      yesVotes: 4,
+      totalVotes: 6,
+      isHot: false,
+      image: "bg-gradient-to-br from-purple-400 to-pink-500",
+      documentsCount: 5,
+      lastUpdated: "1 day ago",
+      metrics: {
+        growth: "+120%",
+        customers: "50+",
+        runway: "12 months"
+      }
+    },
+    {
+      id: 3,
+      name: "FinFlow",
+      tagline: "Next-gen payment processing",
+      industry: "FinTech",
+      stage: "Series B",
+      fundingGoal: "$5M",
+      fundingRaised: "$2.1M",
+      location: "New York, NY",
+      description: "Blockchain-based payment system with 99.9% uptime and instant settlements",
+      teamSize: 25,
+      revenue: "$2M ARR",
+      yesVotes: 12,
+      totalVotes: 15,
+      isHot: true,
+      hotSince: "1 week ago",
+      image: "bg-gradient-to-br from-yellow-400 to-orange-500",
+      documentsCount: 12,
+      lastUpdated: "5 hours ago",
+      metrics: {
+        growth: "+85%",
+        customers: "5,000+",
+        runway: "24 months"
+      }
+    },
+    {
+      id: 4,
+      name: "SpaceLogistics",
+      tagline: "Satellite delivery reimagined",
+      industry: "SpaceTech",
+      stage: "Pre-Series A",
+      fundingGoal: "$3M",
+      fundingRaised: "$500K",
+      location: "Austin, TX",
+      description: "Cost-effective satellite deployment using reusable rocket technology",
+      teamSize: 15,
+      revenue: "$800K ARR",
+      yesVotes: 3,
+      totalVotes: 8,
+      isHot: false,
+      image: "bg-gradient-to-br from-indigo-400 to-purple-600",
+      documentsCount: 7,
+      lastUpdated: "2 days ago",
+      metrics: {
+        growth: "+200%",
+        customers: "25+",
+        runway: "15 months"
+      }
+    }
+  ];
+
+  const hotMoneyRounds = [
+    {
+      id: 1,
+      startup: startups[0],
+      fundingTarget: 2000000,
+      minInvestment: 25000,
+      currentCommitments: 1200000,
+      investorCount: 8,
+      daysLeft: 5,
+      status: 'open',
+      leadInvestor: 'Andreessen Horowitz',
+      documents: 8,
+      lastUpdate: '2 hours ago'
+    },
+    {
+      id: 2,
+      startup: startups[2],
+      fundingTarget: 5000000,
+      minInvestment: 50000,
+      currentCommitments: 3500000,
+      investorCount: 12,
+      daysLeft: 12,
+      status: 'open',
+      leadInvestor: 'Sequoia Capital',
+      documents: 12,
+      lastUpdate: '5 hours ago'
+    }
+  ];
+
+  const handleVote = (startupId, voteType) => {
+    const newVotes = new Map(votes);
+    newVotes.set(startupId, voteType);
+    setVotes(newVotes);
+    
+    if (voteType === 'yes') {
+      const startup = startups.find(s => s.id === startupId);
+      const newMatch = {
+        id: Date.now(),
+        startup: startup,
+        timestamp: new Date().toISOString(),
+        status: 'new'
+      };
+      setMatches([...matches, newMatch]);
+    }
+  };
+
+  const handleSwipe = (direction) => {
+    const startup = startups[currentCardIndex];
+    if (direction === 'right') {
+      handleVote(startup.id, 'yes');
+    } else {
+      handleVote(startup.id, 'no');
+    }
+    setCurrentCardIndex(currentCardIndex + 1);
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      notation: 'compact'
+    }).format(amount);
+  };
+
+  const filteredStartups = startups.filter(startup => {
+    const matchesSearch = startup.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         startup.tagline.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesIndustry = !filterOptions.industry || startup.industry === filterOptions.industry;
+    const matchesStage = !filterOptions.stage || startup.stage === filterOptions.stage;
+    const matchesLocation = !filterOptions.location || startup.location.includes(filterOptions.location);
+    
+    return matchesSearch && matchesIndustry && matchesStage && matchesLocation;
+  });
+
+  const currentStartup = filteredStartups[currentCardIndex];
+  const hasMoreCards = currentCardIndex < filteredStartups.length;
+
+  const renderHeader = () => (
+    <div className="bg-white shadow-lg sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Hot Money
+            </h1>
+          </div>
+          
+          <div className="flex items-center space-x-6">
+            <nav className="flex space-x-1">
+              {[
+                { id: 'discovery', label: 'Discovery', icon: Search },
+                { id: 'hot-money', label: 'Hot Money', icon: Star },
+                { id: 'matches', label: 'Matches', icon: MessageCircle },
+                { id: 'portfolio', label: 'Portfolio', icon: BarChart3 }
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setView(id)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                    view === id 
+                      ? 'bg-orange-100 text-orange-700' 
+                      : 'text-gray-600 hover:text-orange-600'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="font-medium">{label}</span>
+                  {id === 'matches' && matches.length > 0 && (
+                    <span className="bg-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {matches.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </nav>
+            
+            <div className="flex items-center space-x-4">
+              <button className="relative p-2 text-gray-600 hover:text-orange-600 transition-colors">
+                <Bell className="w-5 h-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+              
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">SC</span>
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold text-gray-800">{currentUser.name}</div>
+                  <div className="text-gray-500 capitalize">{currentUser.role}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDiscoveryView = () => (
+    <div className="space-y-6">
+      {/* Search and Filters */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search startups..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <Filter className="w-5 h-5 text-gray-400" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { key: 'industry', label: 'Industry', options: ['CleanTech', 'HealthTech', 'FinTech', 'SpaceTech'] },
+            { key: 'stage', label: 'Stage', options: ['Seed', 'Series A', 'Series B', 'Pre-Series A'] },
+            { key: 'location', label: 'Location', options: ['San Francisco', 'Boston', 'New York', 'Austin'] }
+          ].map(({ key, label, options }) => (
+            <select
+              key={key}
+              value={filterOptions[key]}
+              onChange={(e) => setFilterOptions({...filterOptions, [key]: e.target.value})}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">{label}</option>
+              {options.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          ))}
+        </div>
+      </div>
+
+      {/* Startup Cards */}
+      <div className="flex flex-col items-center">
+        {hasMoreCards ? (
+          <div className="relative w-full max-w-md">
+            {/* Card Stack Effect */}
+            <div className="absolute inset-0 bg-white rounded-xl shadow-lg transform rotate-1 opacity-30 z-10"></div>
+            <div className="absolute inset-0 bg-white rounded-xl shadow-lg transform -rotate-1 opacity-60 z-20"></div>
+            
+            {/* Main Card */}
+            <div className="relative bg-white rounded-xl shadow-2xl overflow-hidden z-30">
+              {/* HOT Badge */}
+              {currentStartup.isHot && (
+                <div className="absolute top-4 right-4 z-40">
+                  <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                    🔥 HOT
+                  </div>
+                </div>
+              )}
+              
+              {/* Header Image */}
+              <div className={`h-48 ${currentStartup.image} flex items-center justify-center relative`}>
+                <div className="text-6xl font-bold text-white opacity-20">
+                  {currentStartup.name.charAt(0)}
+                </div>
+                
+                {/* Voting Progress */}
+                <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 rounded-lg px-3 py-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="text-sm font-bold text-green-600">{currentStartup.yesVotes}</div>
+                    <div className="text-sm text-gray-500">/ {currentStartup.totalVotes} votes</div>
+                    {currentStartup.isHot && <Star className="w-4 h-4 text-yellow-500 fill-current" />}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6">
+                <div className="mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800">{currentStartup.name}</h2>
+                  <p className="text-gray-600 italic">{currentStartup.tagline}</p>
+                </div>
+                
+                {/* Key Metrics */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-green-600">{currentStartup.metrics.growth}</div>
+                    <div className="text-xs text-gray-500">Growth</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-blue-600">{currentStartup.metrics.customers}</div>
+                    <div className="text-xs text-gray-500">Customers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-orange-600">{currentStartup.metrics.runway}</div>
+                    <div className="text-xs text-gray-500">Runway</div>
+                  </div>
+                </div>
+                
+                {/* Details */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Industry</span>
+                    <span className="font-semibold text-gray-800">{currentStartup.industry}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Stage</span>
+                    <span className="font-semibold text-gray-800">{currentStartup.stage}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Funding Goal</span>
+                    <span className="font-semibold text-green-600">{currentStartup.fundingGoal}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Revenue</span>
+                    <span className="font-semibold text-gray-800">{currentStartup.revenue}</span>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <div className="flex items-center space-x-1 text-gray-600 mb-2">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm">{currentStartup.location}</span>
+                  </div>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    {currentStartup.description}
+                  </p>
+                </div>
+                
+                {/* Documents and Updates */}
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <div className="flex items-center space-x-1">
+                    <FileText className="w-4 h-4" />
+                    <span>{currentStartup.documentsCount} documents</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="w-4 h-4" />
+                    <span>Updated {currentStartup.lastUpdated}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex justify-center space-x-8 mt-8">
+              <button
+                onClick={() => handleSwipe('left')}
+                className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors border-2 border-gray-200"
+              >
+                <X className="w-8 h-8 text-red-500" />
+              </button>
+              <button
+                onClick={() => handleSwipe('right')}
+                className="w-16 h-16 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors border-2 border-orange-200"
+              >
+                <Heart className="w-8 h-8 text-orange-500" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No more startups!</h3>
+            <p className="text-gray-600 mb-6">You've viewed all available opportunities.</p>
+            <button
+              onClick={() => setCurrentCardIndex(0)}
+              className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-red-700 transition-all"
+            >
+              Start Over
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderHotMoneyView = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Active Hot Money Rounds</h2>
+        
+        <div className="space-y-6">
+          {hotMoneyRounds.map((round) => (
+            <div key={round.id} className="border border-gray-200 rounded-xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-16 h-16 rounded-xl ${round.startup.image} flex items-center justify-center text-white font-bold text-xl`}>
+                    {round.startup.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">{round.startup.name}</h3>
+                    <p className="text-gray-600">{round.startup.tagline}</p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <span className="text-sm text-gray-500">Lead: {round.leadInvestor}</span>
+                      <span className="text-sm text-gray-500">{round.investorCount} investors</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold">
+                    🔥 HOT
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">{round.daysLeft} days left</div>
+                </div>
+              </div>
+              
+              {/* Funding Progress */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-600">Funding Progress</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {formatCurrency(round.currentCommitments)} / {formatCurrency(round.fundingTarget)}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full"
+                    style={{ width: `${(round.currentCommitments / round.fundingTarget) * 100}%` }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {Math.round((round.currentCommitments / round.fundingTarget) * 100)}% funded
+                </div>
+              </div>
+              
+              {/* Investment Details */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-bold text-gray-800">{formatCurrency(round.minInvestment)}</div>
+                  <div className="text-sm text-gray-500">Min Investment</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-bold text-gray-800">{round.documents}</div>
+                  <div className="text-sm text-gray-500">Documents</div>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <div className="text-lg font-bold text-gray-800">{round.lastUpdate}</div>
+                  <div className="text-sm text-gray-500">Last Update</div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex space-x-3">
+                <button className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all">
+                  Invest Now
+                </button>
+                <button className="px-6 py-3 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                  View Deal Room
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderMatchesView = () => (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Matches</h2>
+      
+      {matches.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No matches yet</h3>
+          <p className="text-gray-500">Start swiping to find your perfect investment opportunities!</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {matches.map((match) => (
+            <div key={match.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className={`w-16 h-16 rounded-xl ${match.startup.image} flex items-center justify-center text-white font-bold text-xl`}>
+                {match.startup.name.charAt(0)}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-800">{match.startup.name}</h3>
+                <p className="text-gray-600">{match.startup.tagline}</p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <span className="text-sm text-gray-500">{match.startup.industry}</span>
+                  <span className="text-sm text-gray-500">{match.startup.stage}</span>
+                  <span className="text-sm text-green-600 font-semibold">{match.startup.fundingGoal}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500 mb-2">
+                  {new Date(match.timestamp).toLocaleDateString()}
+                </div>
+                <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition-all">
+                  Connect
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPortfolioView = () => (
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Investment Portfolio</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-xl">
+          <div className="text-3xl font-bold">$2.5M</div>
+          <div className="text-orange-100">Total Invested</div>
+        </div>
+        <div className="bg-gradient-to-r from-green-500 to-teal-600 text-white p-6 rounded-xl">
+          <div className="text-3xl font-bold">12</div>
+          <div className="text-green-100">Active Investments</div>
+        </div>
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-6 rounded-xl">
+          <div className="text-3xl font-bold">3.2x</div>
+          <div className="text-amber-100">Average Return</div>
+        </div>
+      </div>
+      
+      <div className="text-center py-8 text-gray-500">
+        <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p>Portfolio tracking coming soon...</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50">
+      {renderHeader()}
+      
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {view === 'discovery' && renderDiscoveryView()}
+        {view === 'hot-money' && renderHotMoneyView()}
+        {view === 'matches' && renderMatchesView()}
+        {view === 'portfolio' && renderPortfolioView()}
+      </div>
+    </div>
+  );
+};
+
+export default HotMoneyApp;
